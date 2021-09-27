@@ -15,6 +15,7 @@ export default defineConfig({
     host: true,
     proxy: {
       // Using the proxy instance
+      //'/search'にアクセスが来た時に、target: 'https://itunes.apple.com/',へ変換
       '/search': {
         target: 'https://itunes.apple.com/',
         changeOrigin: true,
