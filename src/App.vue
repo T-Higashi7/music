@@ -9,15 +9,21 @@
   <button @click="search">検索</button>
  </div>
  <div class="mt-3" v-if="show">
-   <button type="button" class="ms-1 btn btn-primary">トラックID</button>
    <button type="button" class="ms-1 btn btn-primary">トラック名</button>
-   <button type="button" class="ms-1 btn btn-primary">トラックの料金</button>
-   <button type="button" class="ms-1 btn btn-primary">アルバムID</button>
    <button type="button" class="ms-1 btn btn-primary">アルバム名</button>
-   <button type="button" class="ms-1 btn btn-primary">アルバムの料金</button>
    <button type="button" class="ms-1 btn btn-primary">アーティスト名</button>
-   <button @click="filter" type="button" class="ms-1 btn btn-primary">ジャンル</button>
-   <button type="button" class="ms-1 btn btn-primary">リリース日</button>
+
+   <!-- ジャンルボタンをクリックすると、フィルター用のセレクトボックスを表示 -->
+   <button @click="genre_filter" type="button" class="ms-1 btn btn-primary">ジャンル</button>
+   <!-- セレクトボックスの選択内容を動的に作成 -->
+   <select v-model="selected_primarygenrename" multiple v-if="primaryGenreName_select_show">
+     <option disabled value ="">選択してください</option>
+     <option v-for="item in select_primarygenrename " v-bind:value="item">
+       {{item}}
+      </option>
+   </select>
+  
+   <p>選択した内容：{{selected_primarygenrename}} </p>
 
    </div>
    
@@ -28,19 +34,18 @@
      <th @click="sortBy('collectionName')" v-bind:class="addClass('collectionName')">アルバム名</th><th @click="sortBy('collectionPrice')" v-bind:class="addClass('collectionPrice')">アルバムの料金</th>
      <th @click="sortBy('artistName')" v-bind:class="addClass('artistName')">アーティスト名</th><th @click="sortBy('primaryGenreName')" v-bind:class="addClass('primaryGenreName')">ジャンル</th>
      <th @click="sortBy('releaseDate')" v-bind:class="addClass('releaseDate')">リリース日</th></tr>
-     <tr v-for = "item in SortSong" v-bind:key="item.trackId">
+     <tr v-for = "item in search_primarygenrename" v-bind:key="item.trackId">
       <td>{{ item.trackId }}</td><td>{{ item.trackName }}</td><td>{{ "¥"+item.trackPrice }}</td><td>{{ item.collectionId }}</td><td>{{ item.collectionName }}</td>
-      <td>{{ "¥"+item.collectionPrice }}</td><td>{{ item.artistName }}</td><td>{{ item.primaryGenreName }}</td><td>{{ date(item.releaseDate) }}</td>
+      <td>{{ "¥"+item.collectionPrice }}</td><td>{{ item.artistName }}</td><td>{{ item.primaryGenreName }}</td><td>{{ item.releaseDate }}</td>
      </tr>
     </table>
+
    </div>
 </div>
 
 </template>
 
 <script>
-
-
 export default {
 
   data () {
@@ -55,8 +60,13 @@ export default {
       sort_key: "",
       //trueの場合は昇順になり、falseの場合は降順になる。
       sort_asc: true,
-      //ジャンルボタンをクリックした時に重複を削除した検索結果を代入する。
-      primaryGenreName_filter: ""
+      //セレクトボックス(ジャンル)の選択肢
+      select_primarygenrename: [],
+      //セレクトボックス(ジャンル)で選択した内容
+      selected_primarygenrename: [],
+
+      //trueの場合はジャンルのセレクトボックス(ジャンル)を表示し、falseの場合はジャンルのセレクトボックス(ジャンル)を表示しない
+      primaryGenreName_select_show: false
     }
   },
 
@@ -67,22 +77,44 @@ export default {
     search(){
       //検索ボックスの入力値をコンソールログに出力。
       console.log(this.term)
-      //URLの前半部分をurlに代入。
+      //APIの接続先のエンドポイント(target: 'https://itunes.apple.com/serch)',の前半部分をurlに代入。
       const url = "/search"
-      //URLの後半部分をqueryParameterに代入。
+      //エンドポイントの後半部分をqueryParameterに代入。
       const queryParameter = `?term=${this.term}&media=music&entity=musicTrack`
-      //URLをgetで取得する。
+      //エンドポイントにクエリパラメータでgetでリクエストを送信する。
       axios.get(url+queryParameter)
+      //送信結果をレスポンスという引数で受け取る。
           .then((response) => {
-            //検索ボタンを押したタイミングでshowプロパティをtrueに切り替え、テーブルを表示するようにする。
+            //showプロパティにtrueを代入する。
+            
             this.show = true
-            //検索結果をコンソールに表示する。
-            console.log(response),
-            console.log(response.data.results),
-            //songプロパティに検索結果を代入。
+            //リクエストを送ってかえってきたレスポンスのresultsをコンソールに表示する。
+            console.log(response)
+            console.log(response.data.results[0].primaryGenreName)
+
+            
+            for (let i = 0; i < response.data.results.length; i ++){
+
+              //返ってきたレスポンスデータからジャンルを配列select_primarygenrenameへ代入。
+              this.select_primarygenrename.push(response.data.results[i].primaryGenreName)
+
+            　//ReleaseDateは年月日の形式****-**-**で表示する
+              function date (songReleaseDate){
+                const words = songReleaseDate.split("T");
+                return words[0]
+              }
+              response.data.results[i].releaseDate = date(response.data.results[i].releaseDate)
+              
+            }
+
+            //ジャンル(primaryGenreName)は重複を削除したものをselect_primarygenrenameへ代入
+            this.select_primarygenrename = this.select_primarygenrename.filter( (ele,pos)=>this.select_primarygenrename.indexOf(ele) == pos);
+            console.log(this.select_primarygenrename);
+
+            //リクエストを送ってかえってきたレスポンスのresultsをsongに代入する。
             this.song =  response.data.results
 
-            //検索ボタンを押したタイミングでリリース日の昇順でソートを行う。
+            //検索ボタンを押した時は、リリース日の昇順でソートする。
             return this.song.sort((a,b) => {
             //「a」より「b」のほうが大きければ、-1を返し「a」は「b」の後ろに。bよりaのほうが大きい場合は1を返し、「a」は「b」の前に。
             // 大きさが同じ場合は0を返し、「a」は「b]の前になる。
@@ -90,26 +122,17 @@ export default {
       　})
       }) 
     },
-    
-    filter(item){
-     console.log(item.primaryGenreName)
-     this.primaryGenreName_filter =  c.primaryGenreName
+　　 
+    //ジャンルのセレクトボックスの表示、非表示を切り替える
+    genre_filter(){
+      this.primaryGenreName_select_show = true
     },
-    
 
-　　 //dateはリリース日(releaseDate)を"****-**-**"の表記に変更する関数になります。
-　　 //引数に指定しているsongReleaseDateがreleaseDateとなります。
-    date(songReleaseDate){
-      //songReleaseDateを"T"の文字で区切って配列に変換してwordsに代入する。
-      const words = songReleaseDate.split("T");
-      console.log(words[0]);
-　　　//配列(words)の0番目のデータを返す。
-      return words[0] ;
-    },
 
     //初めてカラムをクリックした時は、sort_keyにカラム名を代入しsort_ascにtrueを代入してクリックしたカラムを昇順に切り替える。
     //2回目に1回目と同じカラムをクリックした時は、sort_keyにカラム名を代入しsort_ascをfalseに切り替え、クリックしたカラムを降順に切り替える。
     sortBy(key) {
+      //プロパティのソートキーと引数のソートキーが同じであれば、sort_ascに設定されている値の反転させる
       this.sort_key === key? (this.sort_asc = !this.sort_asc): (this.sort_asc = true);
       //sort_keyにクリックしたカラム名を代入する。
       this.sort_key = key;
@@ -117,9 +140,9 @@ export default {
     //昇順、降順の矢印を切り替える。
     addClass(key) {
       return {
-        //sort_keyがクリックしたカラム名と同じかつ、this.sort_ascがtrueの場合は、昇順の矢印を表示する。
+        //sort_keyがクリックしたカラム名と同じかつ、this.sort_ascがtrueの場合は、昇順
        asc: this.sort_key === key && this.sort_asc,
-       //sort_keyがクリックしたカラム名と同じかつ、this.sort_ascがfalseの場合は、降順の矢印を表示する。
+       //sort_keyがクリックしたカラム名と同じかつ、this.sort_ascがfalseの場合は、降順
        desc: this.sort_key === key && !this.sort_asc,
       }
     }
@@ -140,7 +163,7 @@ export default {
         this.song.sort((a, b) => {
           if (a[this.sort_key] < b[this.sort_key]) return -1 * set;
           if (a[this.sort_key] > b[this.sort_key]) return 1 * set;
-        //ソートをした後に返り値を初期値0に戻す。
+        //同じ値だった場合は0を返す。
           return 0;
         });
         //ソートをした検索結果を返す。
@@ -150,7 +173,16 @@ export default {
         //ソートをしていない検索結果を返す。
         return this.song;
       }
+
+    },
+    
+    //セレクトボックスで選択した内容で絞り込みを行う。
+    search_primarygenrename(){
+      return this.SortSong.filter(item=> {
+        return item.primaryGenreName.includes(this.selected_primarygenrename)
+    　})
     }
+
   }
   
 
