@@ -13,7 +13,7 @@
    <button type="button" class="ms-1 btn btn-primary">アルバム名</button>
    <button type="button" class="ms-1 btn btn-primary">アーティスト名</button>
 
-   <!-- ジャンルボタンをクリックすると、フィルター用のセレクトボックスを表示 -->
+   <!-- ジャンルボタンをクリックすると、フィルター用のセレクトボックスを表示し、フィルタリング完了ボタンも表示する -->
    <button @click="genre_filter" type="button" class="ms-1 btn btn-primary">ジャンル</button>
    <!-- セレクトボックスの選択内容を動的に作成 -->
    <select v-model="selected_primarygenrename" multiple v-if="primaryGenreName_select_show">
@@ -22,6 +22,7 @@
        {{item}}
       </option>
    </select>
+   <button @click="filter_finish" type="button" class="ms-1 btn btn-primary" v-if="filter_finish_show">フィルタリング完了</button>
   
    <p>選択した内容：{{selected_primarygenrename}} </p>
 
@@ -60,61 +61,55 @@ export default {
       sort_key: "",
       //trueの場合は昇順になり、falseの場合は降順になる。
       sort_asc: true,
-      //セレクトボックス(ジャンル)の選択肢
-      select_primarygenrename: [],
+      //セレクトボックス(ジャンル)の内容
+      select_primarygenrename: null,
       //セレクトボックス(ジャンル)で選択した内容
       selected_primarygenrename: [],
-
-      //trueの場合はジャンルのセレクトボックス(ジャンル)を表示し、falseの場合はジャンルのセレクトボックス(ジャンル)を表示しない
-      primaryGenreName_select_show: false
+      //trueの場合はジャンルのセレクトボックス(ジャンル)を表示し、falseの場合はジャンルのセレクトボックス(ジャンル)を表示しない。
+      primaryGenreName_select_show: false,
+      //trueの場合はフィルター完了ボタンを表示し、falseの場合はフィルター完了ボタンを表示しない。
+      filter_finish_show: false
     }
   },
 
-
   methods:{
     
-    //serchは検索ボタンをクリックした後に実行される関数になります。
+    //■ ■ ■ serchは検索ボタンをクリックした後に実行される関数になります。■ ■ ■
     search(){
       //検索ボックスの入力値をコンソールログに出力。
       console.log(this.term)
       //APIの接続先のエンドポイント(target: 'https://itunes.apple.com/serch)',の前半部分をurlに代入。
-      const url = "/search"
+      const url = "/search";
       //エンドポイントの後半部分をqueryParameterに代入。
-      const queryParameter = `?term=${this.term}&media=music&entity=musicTrack`
+      const queryParameter = `?term=${this.term}&media=music&entity=musicTrack`;
       //エンドポイントにクエリパラメータでgetでリクエストを送信する。
       axios.get(url+queryParameter)
       //送信結果をレスポンスという引数で受け取る。
           .then((response) => {
-            //showプロパティにtrueを代入する。
-            
-            this.show = true
-            //リクエストを送ってかえってきたレスポンスのresultsをコンソールに表示する。
-            console.log(response)
-            console.log(response.data.results[0].primaryGenreName)
 
-            
-            for (let i = 0; i < response.data.results.length; i ++){
+            //-----showプロパティにtrueを代入し、フィルタリング用のボタンと検索結果を表示する。-----
+            this.show = true;
 
-              //返ってきたレスポンスデータからジャンルを配列select_primarygenrenameへ代入。
-              this.select_primarygenrename.push(response.data.results[i].primaryGenreName)
+            //-----ReleaseDateを加工(年月日の形式****-**-**)する。-----
+            this.song =response.data.results.map(function(currentValue){
+            //現在処理している要素(response.data.resultsの要素)のreleaseDateを"T"の文字で区切り、aに配列として代入する。
+            let a =currentValue.releaseDate.split("T");
+            //現在処理している要素(response.data.resultsの要素)のreleaseDateにreleaseDateを"T"の文字で区切った前半部分(****-**-**)を代入する。
+            currentValue.releaseDate = a[0];
+            //releaseDateの形式を(****-**-**）現在処理している要素をsongに返す。
+            return currentValue;
+             })
 
-            　//ReleaseDateは年月日の形式****-**-**で表示する
-              function date (songReleaseDate){
-                const words = songReleaseDate.split("T");
-                return words[0]
-              }
-              response.data.results[i].releaseDate = date(response.data.results[i].releaseDate)
-              
-            }
+            //------重複を削除したジャンルselect_primarygenrenameを作成する。(フィルタリングの選択肢に使用する為)-----
+            let array_primaryGenreName = response.data.results.map(function(currentValue){
+            //array_primaryGenreNameに現在処理している要素(response.data.resultsの要素)のprimaryGenreNameを返し、primaryGenreNameのみの配列を作成する。
+            return currentValue.primaryGenreName;
+            })
+            //primaryGenreNameのみの配列(array_primaryGenreName)から重複を削除したものをselect_primarygenrenameに代入する。
+            this.select_primarygenrename = array_primaryGenreName.filter( (ele,pos)=>array_primaryGenreName.indexOf(ele) == pos);
+      
 
-            //ジャンル(primaryGenreName)は重複を削除したものをselect_primarygenrenameへ代入
-            this.select_primarygenrename = this.select_primarygenrename.filter( (ele,pos)=>this.select_primarygenrename.indexOf(ele) == pos);
-            console.log(this.select_primarygenrename);
-
-            //リクエストを送ってかえってきたレスポンスのresultsをsongに代入する。
-            this.song =  response.data.results
-
-            //検索ボタンを押した時は、リリース日の昇順でソートする。
+            //------検索ボタンを押した時のデフォルトのソートはreleaseDateの昇順とする-----
             return this.song.sort((a,b) => {
             //「a」より「b」のほうが大きければ、-1を返し「a」は「b」の後ろに。bよりaのほうが大きい場合は1を返し、「a」は「b」の前に。
             // 大きさが同じ場合は0を返し、「a」は「b]の前になる。
@@ -123,14 +118,21 @@ export default {
       }) 
     },
 　　 
-    //ジャンルのセレクトボックスの表示、非表示を切り替える
+    //■ ■ ■ ジャンルのセレクトボックスを表示し、フィルタリング完了ボタンも表示する。■ ■ ■
     genre_filter(){
-      this.primaryGenreName_select_show = true
+      this.primaryGenreName_select_show = true,
+      this.filter_finish_show = true
     },
 
+    //■ ■ ■　セレクトボックスを非表示にし、フィルタリングを完了させる。■ ■ ■
+    filter_finish(){
+      this.primaryGenreName_select_show = false,
+      this.filter_finish_show = false
+    },
 
-    //初めてカラムをクリックした時は、sort_keyにカラム名を代入しsort_ascにtrueを代入してクリックしたカラムを昇順に切り替える。
-    //2回目に1回目と同じカラムをクリックした時は、sort_keyにカラム名を代入しsort_ascをfalseに切り替え、クリックしたカラムを降順に切り替える。
+     //■ ■ ■ 検索結果をソートする機能の実装 ■ ■ ■
+    //-----初めてカラムをクリックした時は、sort_keyにカラム名を代入しsort_ascにtrueを代入してクリックしたカラムを昇順に切り替える。-----
+    //-----2回目に1回目と同じカラムをクリックした時は、sort_keyにカラム名を代入しsort_ascをfalseに切り替え、クリックしたカラムを降順に切り替える。-----
     sortBy(key) {
       //プロパティのソートキーと引数のソートキーが同じであれば、sort_ascに設定されている値の反転させる
       this.sort_key === key? (this.sort_asc = !this.sort_asc): (this.sort_asc = true);
@@ -150,7 +152,7 @@ export default {
 
 
   computed: {
-　　//各列のソート切り替えを行う。クリックした列(カラム)を取得した結果を昇順にソートする。
+　　//-----各列のソート切り替えを行う。クリックした列(カラム)を取得した結果を昇順にソートする。-----
     SortSong() {
       //もしsort_keyが空白ではなかった場合(列名をクリックして値が入っている場合)、
       if (this.sort_key != "") {
@@ -176,11 +178,20 @@ export default {
 
     },
     
+    //■ ■ ■ フィルタリング機能の実装 ■ ■ ■
     //セレクトボックスで選択した内容で絞り込みを行う。
     search_primarygenrename(){
+      //もしジャンルのセレクトボックスの内容が未選択の場合、
+      if(this.selected_primarygenrename==""){
+      //全てのソートされたデータを返す。
+       return this.SortSong
+       //もしジャンルのセレクトボックスの内容が選択されていた場合で
+      } else {
+       //全てのソートされたデータを//セレクトボックスで選択した内容で絞り込みを行う。
       return this.SortSong.filter(item=> {
-        return item.primaryGenreName.includes(this.selected_primarygenrename)
+        return this.selected_primarygenrename.includes(item.primaryGenreName)
     　})
+     }
     }
 
   }
