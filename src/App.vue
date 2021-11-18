@@ -92,25 +92,25 @@ export default {
 
             //-----ReleaseDateを加工(年月日の形式****-**-**)する。-----
             this.song =response.data.results.map(function(currentValue){
-            //現在処理している要素(response.data.resultsの要素)のreleaseDateを"T"の文字で区切り、aに配列として代入する。
-            let a =currentValue.releaseDate.split("T");
-            //現在処理している要素(response.data.resultsの要素)のreleaseDateにreleaseDateを"T"の文字で区切った前半部分(****-**-**)を代入する。
-            currentValue.releaseDate = a[0];
+            　//現在処理している要素(response.data.resultsの要素)のreleaseDateを"T"の文字で区切り、aに配列として代入する。
+            　let a =currentValue.releaseDate.split("T");
+            　//現在処理している要素(response.data.resultsの要素)のreleaseDateにreleaseDateを"T"の文字で区切った前半部分(****-**-**)を代入する。
+            　currentValue.releaseDate = a[0];
             //releaseDateの形式を(****-**-**）現在処理している要素をsongに返す。
-            return currentValue;
+            　return currentValue;
              })
 
             //------重複を削除したジャンルselect_primarygenrenameを作成する。(フィルタリングの選択肢に使用する為)-----
-            let array_primaryGenreName = response.data.results.map(function(currentValue){
-            //array_primaryGenreNameに現在処理している要素(response.data.resultsの要素)のprimaryGenreNameを返し、primaryGenreNameのみの配列を作成する。
-            return currentValue.primaryGenreName;
+            const array_primaryGenreName = response.data.results.map(function(currentValue){
+            　//array_primaryGenreNameに現在処理している要素(response.data.resultsの要素)のprimaryGenreNameを返し、primaryGenreNameのみの配列を作成する。
+            　return currentValue.primaryGenreName;
             })
             //primaryGenreNameのみの配列(array_primaryGenreName)から重複を削除したものをselect_primarygenrenameに代入する。
             this.select_primarygenrename = array_primaryGenreName.filter( (ele,pos)=>array_primaryGenreName.indexOf(ele) == pos);
       
 
             //------検索ボタンを押した時のデフォルトのソートはreleaseDateの昇順とする-----
-            return this.song.sort((a,b) => {
+            this.song.sort((a,b) => {
             //「a」より「b」のほうが大きければ、-1を返し「a」は「b」の後ろに。bよりaのほうが大きい場合は1を返し、「a」は「b」の前に。
             // 大きさが同じ場合は0を返し、「a」は「b]の前になる。
             return (a.releaseDate < b.releaseDate) ? -1 : (a.releaseDate > b.releaseDate) ? 1 : 0;
@@ -165,7 +165,7 @@ export default {
         this.song.sort((a, b) => {
           if (a[this.sort_key] < b[this.sort_key]) return -1 * set;
           if (a[this.sort_key] > b[this.sort_key]) return 1 * set;
-        //同じ値だった場合は0を返す。
+          //同じ値だった場合は0を返す。
           return 0;
         });
         //ソートをした検索結果を返す。
@@ -188,7 +188,7 @@ export default {
        //もしジャンルのセレクトボックスの内容が選択されていた場合で
       } else {
        //全てのソートされたデータを//セレクトボックスで選択した内容で絞り込みを行う。
-      return this.SortSong.filter(item=> {
+      　return this.SortSong.filter(item=> {
         return this.selected_primarygenrename.includes(item.primaryGenreName)
     　})
      }
